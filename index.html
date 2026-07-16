@@ -305,21 +305,25 @@ async function loadObjetivos(){
 
 // Insights
 async function loadInsights(){
-  let rows=await fetch(`${SUPA}/autolux_insights?area=eq.Paid%20Media&select=notion_id,semana,estatus,accionable,impacto_esperado,resumen,responsable&order=semana.desc`,{headers:H}).then(x=>x.json());
+  let rows=await fetch(`${SUPA}/autolux_insights?area=eq.Paid%20Media&select=notion_id,semana,estatus,accionable,impacto_esperado,resultado,resumen,responsable&order=semana.desc`,{headers:H}).then(x=>x.json());
   const seen=new Set();rows=rows.filter(r=>{if(seen.has(r.notion_id))return false;seen.add(r.notion_id);return true;});
   const wk={};rows.forEach(r=>{if(!wk[r.semana])wk[r.semana]=r;});
   const weeks=Object.keys(wk).sort().reverse().slice(0,2); // [esta, pasada]
   if(!weeks.length){$('insBody').innerHTML='<div class="muted-note">Todavía no hay conclusiones cargadas para Paid Media.</div>';return;}
   const fmtWk=d=>{const p=d.split('-');return 'Semana del '+(+p[2])+' '+MES[+p[1]-1];};
-  const chip=s=>{s=(s||'').toLowerCase();let c='ke-c-neutral';if(s.includes('curso'))c='ke-c-accent';else if(s.includes('hecho')||s.includes('ok'))c='ke-c-ok';else if(s.includes('propuesto'))c='ke-c-warn';return `<span class="ke-chip ${c}">${s||'—'}</span>`;};
+  const tx=v=>(v==null?'':String(v).trim());
+  const esc=v=>tx(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  const fld=(l,v)=>tx(v)?`<div class="ins-field"><div class="ins-lbl">${l}</div><div class="ins-txt">${esc(v)}</div></div>`:'';
   const card=(d,now)=>{const r=wk[d];return `<div class="ins-card ${now?'now':''}"><div class="ins-wk"><span>${fmtWk(d)}</span><span class="tag">${now?'Esta semana':'Semana pasada'}</span></div>
-    ${r.resumen?`<div class="ins-field"><div class="ins-lbl">Conclusión</div><div class="ins-txt">${r.resumen}</div></div>`:''}
-    <div class="ins-field"><div class="ins-lbl">Estatus</div>${chip(r.estatus)}</div>
-    ${r.accionable?`<div class="ins-field"><div class="ins-lbl">Accionable</div><div class="ins-txt">${r.accionable}</div></div>`:''}
-    ${r.impacto_esperado?`<div class="ins-field"><div class="ins-lbl">Impacto esperado</div><div class="ins-txt">${r.impacto_esperado}</div></div>`:''}
-    ${r.responsable?`<div class="ins-field"><div class="ins-lbl">Responsable</div><div class="ins-txt">${r.responsable}</div></div>`:''}</div>`;};
+    ${fld('Conclusión',r.resumen)}
+    ${fld('Situación',r.estatus)}
+    ${fld('Accionable',r.accionable)}
+    ${fld('Impacto esperado',r.impacto_esperado)}
+    ${fld('Resultado',r.resultado)}
+    ${fld('Responsable',r.responsable)}</div>`;};
+  if(weeks.length===1){$('insBody').innerHTML=card(weeks[0],true);return;}
   const now=weeks[0], prev=weeks[1];
-  $('insBody').innerHTML=`<div class="ins-grid">${prev?card(prev,false):'<div></div>'}${card(now,true)}</div>`;
+  $('insBody').innerHTML=`<div class="ins-grid">${card(prev,false)}${card(now,true)}</div>`;
 }
 
 document.querySelectorAll('.ke-per').forEach(b=>b.addEventListener('click',()=>load(b.dataset.p)));
